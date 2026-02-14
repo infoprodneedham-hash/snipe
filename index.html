@@ -2,122 +2,48 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JS Sniper Elite</title>
+    <title>Sniper Range: Movement Fixed</title>
     <style>
-        :root {
-            --scope-size: 250px;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #1a1a1a;
-            color: white;
-            font-family: 'Courier New', Courier, monospace;
-            overflow: hidden;
-            user-select: none;
-        }
-
-        /* The Battlefield */
-        #game-box {
-            width: 100vw;
-            height: 100vh;
-            background: linear-gradient(to bottom, #4a5d4a 0%, #2e3b2e 100%);
-            position: relative;
-            cursor: none; /* Hide default cursor */
-        }
-
-        /* The Scope Overlay */
+        :root { --scope-size: 220px; }
+        body { margin: 0; padding: 0; background: #1a1a1a; color: white; font-family: 'Courier New', monospace; overflow: hidden; user-select: none; cursor: none; }
+        #game-box { width: 100vw; height: 100vh; background: #2e3b2e; position: relative; overflow: hidden; }
+        
+        /* Scope */
         #scope {
-            width: var(--scope-size);
-            height: var(--scope-size);
-            border: 3px solid #000;
-            border-radius: 50%;
-            position: absolute;
-            pointer-events: none;
-            /* Creating the 'tunnel vision' effect */
-            box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.85);
-            z-index: 100;
-            transform: translate(-50%, -50%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: var(--scope-size); height: var(--scope-size);
+            border: 4px solid #000; border-radius: 50%;
+            position: absolute; pointer-events: none;
+            box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.8);
+            z-index: 100; transform: translate(-50%, -50%);
         }
+        .crosshair-h { width: 100%; height: 2px; background: rgba(255,0,0,0.6); position: absolute; top: 50%; }
+        .crosshair-v { width: 2px; height: 100%; background: rgba(255,0,0,0.6); position: absolute; left: 50%; }
 
-        /* Crosshairs */
-        .crosshair-h { width: 100%; height: 1px; background: rgba(255,0,0,0.5); position: absolute; }
-        .crosshair-v { width: 1px; height: 100%; background: rgba(255,0,0,0.5); position: absolute; }
-
-        /* Muzzle Flash */
-        #flash {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: white;
-            opacity: 0;
-            pointer-events: none;
-            z-index: 99;
-        }
-
-        /* Target Styling */
+        /* Target */
         .target {
-            width: 60px;
-            height: 60px;
+            width: 60px; height: 60px;
             background: radial-gradient(circle, red 10%, white 10%, white 30%, red 30%, red 50%, white 50%, white 70%, red 70%);
-            border-radius: 50%;
-            position: absolute;
-            transition: transform 0.2s ease-out;
-            box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+            border-radius: 50%; position: absolute;
+            z-index: 5;
         }
 
-        /* HUD */
-        #hud {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 110;
-            background: rgba(0,0,0,0.6);
-            padding: 15px;
-            border-left: 4px solid #0f0;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .stat { margin-bottom: 5px; }
-        .stat span { color: #0f0; font-weight: bold; }
-
-        /* Messages */
-        #msg {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 3rem;
-            text-align: center;
-            z-index: 120;
-            display: none;
-            text-shadow: 2px 2px 10px #000;
-        }
+        #hud { position: absolute; top: 20px; left: 20px; z-index: 110; background: rgba(0,0,0,0.7); padding: 15px; border-left: 4px solid #0f0; }
+        #flash { position: absolute; width: 100%; height: 100%; background: white; opacity: 0; pointer-events: none; z-index: 99; }
+        #msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2.5rem; text-align: center; z-index: 120; display: none; }
     </style>
 </head>
 <body>
 
-    <div id="game-box">
-        <div id="flash"></div>
-        <div id="scope">
-            <div class="crosshair-h"></div>
-            <div class="crosshair-v"></div>
-        </div>
-
-        <div id="hud">
-            <div class="stat">ROUND: <span id="round-val">1</span></div>
-            <div class="stat">HITS: <span id="hits-val">0</span> / 10</div>
-            <div class="stat">AMMO: <span id="ammo-val">15</span></div>
-        </div>
-
-        <div id="msg"></div>
+<div id="game-box">
+    <div id="flash"></div>
+    <div id="scope"><div class="crosshair-h"></div><div class="crosshair-v"></div></div>
+    <div id="hud">
+        <div>ROUND: <span id="r-val">1</span></div>
+        <div>HITS: <span id="h-val">0</span> / 10</div>
+        <div>AMMO: <span id="a-val">15</span></div>
     </div>
+    <div id="msg"></div>
+</div>
 
 <script>
     const gameBox = document.getElementById('game-box');
@@ -125,150 +51,114 @@
     const flash = document.getElementById('flash');
     const msg = document.getElementById('msg');
     
-    // UI Elements
-    const uiHits = document.getElementById('hits-val');
-    const uiAmmo = document.getElementById('ammo-val');
-    const uiRound = document.getElementById('round-val');
+    let hits = 0, ammo = 15, round = 1, gameActive = true;
 
-    let hits = 0;
-    let ammo = 15;
-    let round = 1;
-    let gameActive = true;
-
-    // --- AUDIO GENERATOR ---
-    // Creating a synthetic "Bang" sound so no external assets are needed
+    // Audio
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    
-    function playShotSound() {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    function playShot() {
+        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(120, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.2);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.2);
     }
 
-    // --- GAME LOGIC ---
-
-    // Move Scope
-    window.addEventListener('mousemove', (e) => {
+    // Movement
+    window.addEventListener('mousemove', e => {
         if(!gameActive) return;
         scope.style.left = e.clientX + 'px';
         scope.style.top = e.clientY + 'px';
     });
 
-    // Shooting
-    window.addEventListener('mousedown', (e) => {
+    window.addEventListener('mousedown', e => {
         if(!gameActive || ammo <= 0) return;
-
-        // Fire Weapon
         ammo--;
-        uiAmmo.innerText = ammo;
-        playShotSound();
-        triggerRecoil();
+        document.getElementById('a-val').innerText = ammo;
+        playShot();
+        
+        flash.style.opacity = '0.5'; setTimeout(() => flash.style.opacity = '0', 50);
+        scope.style.marginTop = "-30px"; setTimeout(() => scope.style.marginTop = "0px", 100);
 
-        // Check Hit
-        const target = document.elementFromPoint(e.clientX, e.clientY);
-        if (target && target.classList.contains('target')) {
-            processHit(target);
+        const hitObj = document.elementFromPoint(e.clientX, e.clientY);
+        if (hitObj && hitObj.classList.contains('target')) {
+            hits++;
+            document.getElementById('h-val').innerText = hits;
+            hitObj.remove();
+            if (hits < 10) spawnTarget();
+            checkGameState();
+        } else {
+            if (ammo <= 0) checkGameState();
         }
-
-        checkStatus();
     });
-
-    function triggerRecoil() {
-        // Visual flash
-        flash.style.opacity = '0.5';
-        setTimeout(() => flash.style.opacity = '0', 50);
-
-        // Scope kick up
-        scope.style.marginTop = "-40px";
-        setTimeout(() => scope.style.marginTop = "0px", 100);
-    }
 
     function spawnTarget() {
         const t = document.createElement('div');
         t.className = 'target';
         
-        // Random Position (keeping away from edges)
-        const x = Math.random() * (window.innerWidth - 100) + 50;
-        const y = Math.random() * (window.innerHeight - 100) + 50;
-        
-        t.style.left = x + 'px';
-        t.style.top = y + 'px';
+        if (round === 1) {
+            t.style.left = (Math.random() * 80 + 10) + 'vw';
+            t.style.top = (Math.random() * 80 + 10) + 'vh';
+        } else {
+            // Round 2 Logic: Constant Drift
+            let side = Math.random() > 0.5;
+            let posX = side ? -60 : window.innerWidth + 60;
+            let posY = (Math.random() * 60 + 20) + 'vh';
+            let speed = (Math.random() * 3 + 2) * (side ? 1 : -1); // Speed between 2 and 5
 
-        // Round 2 Movement Logic
-        if (round === 2) {
-            moveTargetRandomly(t);
+            t.style.top = posY;
+            t.style.left = posX + 'px';
+
+            function animate() {
+                if (!t.parentNode) return;
+                posX += speed;
+                t.style.left = posX + 'px';
+
+                // Wrap around
+                if (posX > window.innerWidth + 100) posX = -100;
+                if (posX < -100) posX = window.innerWidth + 100;
+
+                requestAnimationFrame(animate);
+            }
+            requestAnimationFrame(animate);
         }
-
         gameBox.appendChild(t);
     }
 
-    function moveTargetRandomly(t) {
-        if (!t.parentNode) return;
-        const x = Math.random() * (window.innerWidth - 100) + 50;
-        const y = Math.random() * (window.innerHeight - 100) + 50;
-        t.style.transition = "all 1.5s ease-in-out";
-        t.style.left = x + 'px';
-        t.style.top = y + 'px';
-        setTimeout(() => moveTargetRandomly(t), 1600);
-    }
-
-    function processHit(t) {
-        hits++;
-        uiHits.innerText = hits;
-        t.style.transform = "scale(0) rotate(180deg)";
-        setTimeout(() => {
-            t.remove();
-            if (hits < 10) spawnTarget();
-        }, 200);
-    }
-
-    function checkStatus() {
+    function checkGameState() {
         if (hits >= 10) {
             if (round === 1) {
                 round = 2;
-                showBriefing("ROUND 1 CLEAR\nMOVING TARGETS DETECTED");
+                uiMessage("ROUND 1 CLEAR\nMOVING TARGETS DETECTED");
             } else {
-                showBriefing("MISSION COMPLETE\nYOU ARE THE ELITE");
+                uiMessage("MISSION COMPLETE\nYOU ARE A LEGEND");
                 gameActive = false;
             }
-        } else if (ammo <= 0) {
-            showBriefing("OUT OF AMMO\nMISSION FAILED");
+        } else if (ammo <= 0 && hits < 10) {
+            uiMessage("OUT OF AMMO\nGAME OVER");
             gameActive = false;
             setTimeout(() => location.reload(), 3000);
         }
     }
 
-    function showBriefing(text) {
+    function uiMessage(text) {
         msg.innerText = text;
         msg.style.display = 'block';
         gameActive = false;
-        
-        // Clear all current targets
         document.querySelectorAll('.target').forEach(t => t.remove());
 
         if (text.includes("CLEAR")) {
             setTimeout(() => {
                 msg.style.display = 'none';
-                hits = 0;
-                ammo = 15;
-                uiHits.innerText = hits;
-                uiAmmo.innerText = ammo;
-                uiRound.innerText = round;
+                hits = 0; ammo = 15; round = 2;
+                document.getElementById('h-val').innerText = hits;
+                document.getElementById('a-val').innerText = ammo;
+                document.getElementById('r-val').innerText = round;
                 gameActive = true;
                 spawnTarget();
             }, 3000);
         }
     }
 
-    // Initialize
     spawnTarget();
 </script>
 </body>
